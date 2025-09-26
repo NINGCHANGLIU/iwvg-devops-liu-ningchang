@@ -1,4 +1,4 @@
-package es.upm.miw.devops.code;
+package es.upm.miw.iwvg.devops.code;
 
 /**
  * Conceptos: Las fracciones propias son aquellas cuyo numerador es menor que el denominador
