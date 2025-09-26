@@ -13,8 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # 取消浅克隆，拿到完整历史（解决 shallow / blame）
-          fetch-tags: true        # 可选：同时拉取 tags
+          fetch-depth: 0   # 禁止浅克隆，拿到完整 git 历史
 
           - name: Set up JDK
         uses: actions/setup-java@v4
