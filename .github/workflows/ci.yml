@@ -27,6 +27,9 @@ jobs:
         run: mvn -B -DskipTests=false verify
 
       - name: SonarCloud Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # 你的 GitHub Secrets 里配置的 token
-        run: mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests
+          env:
+            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          run: |
+            mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests \
+              -Dsonar.organization=ningchangliu \
+              -Dsonar.projectKey=NINGCHANGLIU_iwvg-devops-liu-ningchang
