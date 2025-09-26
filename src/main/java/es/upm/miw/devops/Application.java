@@ -11,3 +11,5 @@ public class Application {
     }
 }
 // trigger sonar scan
+// sonar check 2
+// sonar check 3
