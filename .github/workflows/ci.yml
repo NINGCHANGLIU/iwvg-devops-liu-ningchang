@@ -23,3 +23,8 @@ jobs:
 
       - name: Build & Test with Maven
         run: mvn -B -DskipTests=false verify
+
+      - name: SonarCloud Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # 你在 GitHub Secrets 里刚建的
+        run: mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests
