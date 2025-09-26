@@ -23,13 +23,10 @@ jobs:
           java-version: '21'
           cache: 'maven'
 
-      - name: Build & Test with Maven
-        run: mvn -B -DskipTests=false verify
-
-      - name: SonarCloud Scan
+      - name: Build, Test & SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests \
+          mvn -B clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -Dsonar.organization=ningchangliu \
             -Dsonar.projectKey=NINGCHANGLIU_iwvg-devops-liu-ningchang
