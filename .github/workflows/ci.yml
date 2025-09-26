@@ -10,11 +10,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # 取消浅克隆，拿到完整历史（解决 shallow / blame）
+          fetch-tags: true        # 可选：同时拉取 tags
 
-      - name: Set up JDK
+          - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
