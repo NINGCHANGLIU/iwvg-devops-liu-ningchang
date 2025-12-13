@@ -2,14 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [ develop, release-* ]
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "develop" ]
 
 jobs:
   build:
     name: Test & SonarCloud
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: read
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -17,14 +17,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Java
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 21
+          distribution: 'temurin'
+          java-version: '17'
           cache: maven
 
-      - name: Run tests (verify)
+      - name: Build & Test
         run: mvn -B verify
 
       - name: SonarCloud analysis
@@ -32,7 +32,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
           mvn -B sonar:sonar
-          -Dsonar.projectKey=NINGCHANGLIU_iwvg-devops-liu-ningchang3
-          -Dsonar.organization=ningchangliu
           -Dsonar.host.url=https://sonarcloud.io
-          -Dsonar.token=${SONAR_TOKEN}
+          -Dsonar.organization=ningchangliu
+          -Dsonar.projectKey=NINGCHANGLIU_iwvg-devops-liu-ningchang
