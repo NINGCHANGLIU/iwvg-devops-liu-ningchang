@@ -3,31 +3,37 @@ name: CI
 on:
   push:
     branches:
-      - master
       - develop
-      - "issue#*"
-      - "release-*"
+      - release-*
   pull_request:
     branches:
       - develop
 
 jobs:
-  test:
-    name: Maven Verify (Unit + IT + FT)
+  build:
     runs-on: ubuntu-22.04
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Java 21
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: 21
           cache: maven
 
       - name: Run tests (verify)
         run: mvn -B verify
+
+      - name: SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          mvn -B sonar:sonar
+          -Dsonar.organization=ningchangliu
+          -Dsonar.projectKey=NINGCHANGLIU_iwvg-devops-liu-ningchang3
+          -Dsonar.host.url=https://sonarcloud.io
