@@ -2,16 +2,14 @@ name: CI
 
 on:
   push:
-    branches:
-      - develop
-      - release-*
-  pull_request:
-    branches:
-      - develop
+    branches: [ develop, release-* ]
 
 jobs:
   build:
+    name: Test & SonarCloud
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -34,6 +32,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
           mvn -B sonar:sonar
-          -Dsonar.organization=ningchangliu
           -Dsonar.projectKey=NINGCHANGLIU_iwvg-devops-liu-ningchang3
+          -Dsonar.organization=ningchangliu
           -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.token=${SONAR_TOKEN}
