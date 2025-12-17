@@ -54,19 +54,19 @@
         <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
         <maven-failsafe-plugin.version>3.5.3</maven-failsafe-plugin.version>
 
-        <!-- coverage report -->
+        <!-- JaCoCo -->
         <jacoco.version>0.8.13</jacoco.version>
+        <jacoco.exec.file>${project.build.directory}/jacoco.exec</jacoco.exec.file>
+
+        <!-- IMPORTANT: declare these so IntelliJ stops marking them as unresolved -->
+        <argLine></argLine>
+        <failsafeArgLine></failsafeArgLine>
 
         <!-- Official Plugin Sonar -->
         <sonar-maven-plugin-version>5.2.0.4988</sonar-maven-plugin-version>
 
         <!-- OpenAPI -->
         <springdoc-openapi-starter-webmvc-ui.version>2.8.11</springdoc-openapi-starter-webmvc-ui.version>
-
-        <!-- IMPORTANT: predefine these so IntelliJ doesn't complain;
-             JaCoCo will overwrite/append them during Maven build -->
-        <argLine></argLine>
-        <failsafeArgLine></failsafeArgLine>
     </properties>
 
     <dependencies>
@@ -93,7 +93,7 @@
             <version>${springdoc-openapi-starter-webmvc-ui.version}</version>
         </dependency>
 
-        <!-- Tests -->
+        <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -133,39 +133,51 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
-                <configuration>
-                    <destFile>${project.build.directory}/jacoco.exec</destFile>
-                    <append>true</append>
-                </configuration>
                 <executions>
-                    <!-- Attach agent for unit tests (Surefire) -> sets ${argLine} -->
+
+                    <!-- Unit tests: inject into ${argLine} -->
                     <execution>
                         <id>jacoco-prepare-agent</id>
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
+                        <configuration>
+                            <destFile>${jacoco.exec.file}</destFile>
+                            <append>true</append>
+                            <propertyName>argLine</propertyName>
+                        </configuration>
                     </execution>
 
-                    <!-- Attach agent for integration/functional tests (Failsafe) -> sets ${failsafeArgLine} -->
+                    <!-- Integration/Functional tests: inject into ${failsafeArgLine} -->
                     <execution>
                         <id>jacoco-prepare-agent-integration</id>
                         <goals>
                             <goal>prepare-agent-integration</goal>
                         </goals>
+                        <configuration>
+                            <destFile>${jacoco.exec.file}</destFile>
+                            <append>true</append>
+                            <propertyName>failsafeArgLine</propertyName>
+                        </configuration>
                     </execution>
 
-                    <!-- Generate report once at verify -->
+                    <!-- Report -->
                     <execution>
                         <id>jacoco-report</id>
                         <phase>verify</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>
+                        <configuration>
+                            <dataFile>${jacoco.exec.file}</dataFile>
+                            <outputDirectory>${project.reporting.outputDirectory}/jacoco</outputDirectory>
+                        </configuration>
                     </execution>
+
                 </executions>
             </plugin>
 
-            <!-- Surefire (unit tests): MUST keep ${argLine} -->
+            <!-- Surefire: MUST consume ${argLine} -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -175,7 +187,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Failsafe (IT/FT): MUST keep ${failsafeArgLine} -->
+            <!-- Failsafe: MUST consume ${failsafeArgLine} -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
@@ -184,7 +196,6 @@
                     <argLine>${failsafeArgLine} -Xshare:off</argLine>
                 </configuration>
                 <executions>
-                    <!-- 1) Integration Tests -->
                     <execution>
                         <id>integration-tests</id>
                         <phase>integration-test</phase>
@@ -198,7 +209,6 @@
                         </configuration>
                     </execution>
 
-                    <!-- 2) Functional Tests -->
                     <execution>
                         <id>functional-tests</id>
                         <phase>integration-test</phase>
@@ -212,7 +222,6 @@
                         </configuration>
                     </execution>
 
-                    <!-- 3) Verificación final -->
                     <execution>
                         <id>verify-all</id>
                         <phase>verify</phase>
