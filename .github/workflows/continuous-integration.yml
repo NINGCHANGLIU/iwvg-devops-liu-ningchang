@@ -54,9 +54,13 @@ jobs:
 
           echo "== jacoco LINE covered summary (first 40 counters) =="
           grep -n "<counter type=\"LINE\"" target/site/jacoco/jacoco.xml | head -n 40 || true
-      
+          
+          echo "== Fraction in jacoco.xml (class + LINE counters) =="
+          grep -n "es/upm/miw/devops/model/Fraction" target/site/jacoco/jacoco.xml | head -n 20 || true
+          grep -n "sourcefilename=\"Fraction.java\"" target/site/jacoco/jacoco.xml | head -n 20 || true
 
-      # 4) SonarCloud 读取 XML
+
+# 4) SonarCloud 读取 XML
       - name: SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
