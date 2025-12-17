@@ -24,14 +24,12 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # 1) Print effective-pom to confirm JaCoCo plugin config
       - name: Diagnose JaCoCo config (effective-pom)
         run: |
           mvn -B -q help:effective-pom -Doutput=effective-pom.xml
           echo "== jacoco plugin in effective-pom (grep) =="
           grep -n "jacoco-maven-plugin" -n effective-pom.xml | head -n 50 || true
 
-      # 2) Run verify (templates often bind jacoco prepare-agent to verify)
       - name: Build & Test (verify)
         run: |
           mvn -B clean verify
@@ -41,7 +39,6 @@ jobs:
           find target -maxdepth 6 -type d -name "site" -print || true
           ls -la target || true
 
-      # 3) Force JaCoCo XML generation to standard path Sonar expects
       - name: Force JaCoCo XML report (standard path)
         run: |
           mvn -B jacoco:report \
@@ -52,27 +49,15 @@ jobs:
           ls -la target/site/jacoco || true
           ls -la target/site/jacoco/jacoco.xml || true
 
-          echo "== jacoco LINE covered summary (first 40 counters) =="
-          grep -n "<counter type=\"LINE\"" target/site/jacoco/jacoco.xml | head -n 40 || true
+          echo "== jacoco LINE counters (first 40 matches) =="
+          grep -o "<counter type=\"LINE\" missed=\"[0-9]*\" covered=\"[0-9]*\"/>" target/site/jacoco/jacoco.xml | head -n 40 || true
 
-          echo "== Fraction in jacoco.xml (grep, may be misleading if single-line XML) =="
-          grep -n "sourcefilename=\"Fraction.java\"" target/site/jacoco/jacoco.xml | head -n 5 || true
+          echo "== Does jacoco.xml contain Fraction.java? =="
+          grep -o "sourcefilename=\"Fraction.java\"" target/site/jacoco/jacoco.xml | head -n 5 || true
 
-          echo "== Extract Fraction coverage from jacoco.xml (python -c) =="
-          python3 -c 'import re; from pathlib import Path; xml=Path("target/site/jacoco/jacoco.xml").read_text(encoding="utf-8",errors="ignore"); \
-          print("Contains Fraction.java? ->", "Fraction.java" in xml); \
-          m=re.search(r"(<class name=\\"[^\\"]*Fraction[^\\"]*\\" sourcefilename=\\"Fraction\\.java\\">.*?</class>)", xml); \
-          print("Fraction <class> block found? ->", bool(m)); \
-          classes=re.findall(r"<class name=\\"([^\\"]*Fraction[^\\"]*)\\"", xml); \
-          print("Class names containing Fraction (first 20):", classes[:20]); \
-          block=(m.group(1) if m else ""); \
-          line_counters=(re.findall(r"<counter type=\\"LINE\\" missed=\\"(\\d+)\\" covered=\\"(\\d+)\\\"/>", block) if m else []); \
-          print("LINE counters in Fraction block (missed, covered):", line_counters[:20]); \
-          print("--- Fraction block (first 800 chars) ---"); \
-          print(block[:800]); \
-          print("--- end ---");'
+          echo "== Extract Fraction coverage block (python -c; non-blocking) =="
+          python3 -c 'import re, pathlib; p=pathlib.Path("target/site/jacoco/jacoco.xml"); xml=p.read_text(encoding="utf-8", errors="ignore"); print("Contains Fraction.java? ->", ("sourcefilename=\\"Fraction.java\\"" in xml)); m=re.search(r"(<class name=\\"[^\\"]*Fraction[^\\"]*\\" sourcefilename=\\"Fraction\\.java\\">.*?</class>)", xml); print("Fraction <class> block found? ->", bool(m)); classes=re.findall(r"<class name=\\"([^\\"]*Fraction[^\\"]*)\\"", xml); print("Class names containing Fraction (first 20):", classes[:20]); block=(m.group(1) if m else ""); line=re.findall(r"<counter type=\\"LINE\\" missed=\\"(\\d+)\\" covered=\\"(\\d+)\\\"/>", block); print("LINE counters in Fraction block (missed, covered):", line[:20]); print("--- Fraction block (first 600 chars) ---"); print(block[:600]); print("--- end ---")' || true
 
-      # 4) SonarCloud analysis reads JaCoCo XML
       - name: SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
