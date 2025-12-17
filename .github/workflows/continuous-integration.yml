@@ -21,17 +21,59 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
           cache: maven
 
-      - name: Build & Test
-        run: mvn -B verify
+      # 1) 生成 effective-pom，确认 JaCoCo/Surefire 到底怎么配的
+      - name: Diagnose JaCoCo config (effective-pom)
+        run: |
+          mvn -B -q help:effective-pom -Doutput=effective-pom.xml
+          echo "== jacoco-maven-plugin occurrences in effective-pom =="
+          grep -n "jacoco-maven-plugin" effective-pom.xml | head -n 80 || true
+          echo "== surefire occurrences in effective-pom =="
+          grep -n "maven-surefire-plugin" effective-pom.xml | head -n 80 || true
 
+      # 2) 正常跑一遍 verify（保留你原来的流程）
+      - name: Build & Test (verify)
+        run: |
+          mvn -B clean verify
+          echo "== find jacoco artifacts after verify =="
+          find target -maxdepth 6 -type f \( -name "jacoco*.exec" -o -name "jacoco*.xml" \) -print || true
+          ls -la target || true
+
+      # 3) 关键：显式用 JaCoCo agent 跑一次 FractionTest，确保 exec 文件里有 Fraction 的执行数据
+      #    这一步不会改代码，只是为了验证“到底有没有记录到覆盖率”
+      - name: Force JaCoCo agent on FractionTest (surefire)
+        run: |
+          mvn -B -Dtest=FractionTest jacoco:prepare-agent test
+          echo "== after forced test, check jacoco.exec exists =="
+          ls -la target | grep -E "jacoco\.exec|jacoco\.exec$" || true
+          ls -la target/jacoco.exec || true
+
+      # 4) 强制生成 XML 到 Sonar 需要的默认位置
+      - name: Force JaCoCo XML report (standard path)
+        run: |
+          mvn -B jacoco:report \
+            -Djacoco.dataFile=target/jacoco.exec \
+            -Djacoco.outputDirectory=target/site/jacoco
+
+          echo "== target/site/jacoco listing =="
+          ls -la target/site/jacoco || true
+
+          echo "== Does jacoco.xml contain Fraction.java? =="
+          grep -n "sourcefilename=\"Fraction.java\"" target/site/jacoco/jacoco.xml || true
+
+          echo "== Fraction class snippet (class tag + nearby counters) =="
+          # jacoco.xml 可能是一行，先粗暴换行再 grep，避免一行太长看不懂
+          sed 's/</\n</g' target/site/jacoco/jacoco.xml | grep -n -A3 -B3 "sourcefilename=\"Fraction.java\"" | head -n 120 || true
+
+      # 5) SonarCloud 读取 XML（保持最小必要参数）
       - name: SonarCloud analysis
-        if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: >
-          mvn -B sonar:sonar
-          -Dsonar.projectKey=NINGCHANGLIU_iwvg-devops-liu-ningchang
-          -Dsonar.organization=ningchangliu
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mvn -B sonar:sonar \
+            -Dsonar.projectKey=NINGCHANGLIU_iwvg-devops-liu-ningchang \
+            -Dsonar.organization=ningchangliu \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
