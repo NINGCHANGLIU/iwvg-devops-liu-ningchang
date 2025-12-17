@@ -28,16 +28,32 @@ jobs:
         run: |
           mvn -B -q help:effective-pom -Doutput=effective-pom.xml
           echo "== jacoco plugin in effective-pom (grep) =="
-          grep -n "jacoco-maven-plugin" -n effective-pom.xml | head -n 50 || true
+          grep -n "jacoco-maven-plugin" -n effective-pom.xml | head -n 80 || true
+          echo "== surefire plugin in effective-pom (grep) =="
+          grep -n "maven-surefire-plugin" -n effective-pom.xml | head -n 120 || true
 
       - name: Build & Test (verify)
         run: |
           mvn -B clean verify
 
+          echo "== surefire reports (Tests run summary) =="
+          ls -la target/surefire-reports || true
+          grep -R "Tests run:" -n target/surefire-reports || true
+          echo "== check FractionTest appears in surefire-reports =="
+          grep -R "FractionTest" -n target/surefire-reports || true
+
           echo "== find jacoco artifacts after verify =="
           find target -maxdepth 6 -type f \( -name "jacoco*.exec" -o -name "jacoco*.xml" \) -print || true
           find target -maxdepth 6 -type d -name "site" -print || true
           ls -la target || true
+
+      # 关键：显式让 JaCoCo 挂到 surefire 的 test 阶段，确保 jacoco.exec 有单测覆盖
+      - name: Force JaCoCo agent on unit tests (surefire)
+        run: |
+          mvn -B -Dtest=FractionTest jacoco:prepare-agent test
+
+          echo "== after forced test, check jacoco.exec exists =="
+          ls -la target/jacoco.exec || true
 
       - name: Force JaCoCo XML report (standard path)
         run: |
@@ -52,13 +68,9 @@ jobs:
           echo "== Does jacoco.xml contain Fraction.java? =="
           grep -o 'sourcefilename="Fraction.java"' target/site/jacoco/jacoco.xml | head -n 5 || true
 
-          echo "== jacoco LINE counters (first 40 matches) =="
-          grep -o '<counter type="LINE" missed="[0-9]*" covered="[0-9]*"/>' target/site/jacoco/jacoco.xml | head -n 40 || true
-
-          echo "== Fraction class snippet (class tag + first LINE counters nearby) =="
-          # jacoco.xml 可能是一行，先把每个 <class> 拆行，再抓 Fraction 那个 class 附近内容
+          echo "== Fraction class snippet (should show covered > 0 if tests were recorded) =="
           sed 's/<class /\n<class /g' target/site/jacoco/jacoco.xml \
-            | grep -n 'sourcefilename="Fraction.java"' -n -A 3 -B 0 || true
+            | grep -n 'sourcefilename="Fraction.java"' -n -A 1 -B 0 || true
 
       - name: SonarCloud analysis
         env:
