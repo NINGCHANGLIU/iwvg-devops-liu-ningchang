@@ -21,40 +21,36 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
           cache: maven
 
+      # 1) 生成 effective-pom，确认 JaCoCo/Surefire 到底怎么配的
       - name: Diagnose JaCoCo config (effective-pom)
         run: |
           mvn -B -q help:effective-pom -Doutput=effective-pom.xml
-          echo "== jacoco plugin in effective-pom (grep) =="
-          grep -n "jacoco-maven-plugin" -n effective-pom.xml | head -n 80 || true
-          echo "== surefire plugin in effective-pom (grep) =="
-          grep -n "maven-surefire-plugin" -n effective-pom.xml | head -n 120 || true
+          echo "== jacoco-maven-plugin occurrences in effective-pom =="
+          grep -n "jacoco-maven-plugin" effective-pom.xml | head -n 80 || true
+          echo "== surefire occurrences in effective-pom =="
+          grep -n "maven-surefire-plugin" effective-pom.xml | head -n 80 || true
 
+      # 2) 正常跑一遍 verify（保留你原来的流程）
       - name: Build & Test (verify)
         run: |
           mvn -B clean verify
-
-          echo "== surefire reports (Tests run summary) =="
-          ls -la target/surefire-reports || true
-          grep -R "Tests run:" -n target/surefire-reports || true
-          echo "== check FractionTest appears in surefire-reports =="
-          grep -R "FractionTest" -n target/surefire-reports || true
-
           echo "== find jacoco artifacts after verify =="
           find target -maxdepth 6 -type f \( -name "jacoco*.exec" -o -name "jacoco*.xml" \) -print || true
-          find target -maxdepth 6 -type d -name "site" -print || true
           ls -la target || true
 
-      # 关键：显式让 JaCoCo 挂到 surefire 的 test 阶段，确保 jacoco.exec 有单测覆盖
-      - name: Force JaCoCo agent on unit tests (surefire)
+      # 3) 关键：显式用 JaCoCo agent 跑一次 FractionTest，确保 exec 文件里有 Fraction 的执行数据
+      #    这一步不会改代码，只是为了验证“到底有没有记录到覆盖率”
+      - name: Force JaCoCo agent on FractionTest (surefire)
         run: |
           mvn -B -Dtest=FractionTest jacoco:prepare-agent test
-
           echo "== after forced test, check jacoco.exec exists =="
+          ls -la target | grep -E "jacoco\.exec|jacoco\.exec$" || true
           ls -la target/jacoco.exec || true
 
+      # 4) 强制生成 XML 到 Sonar 需要的默认位置
       - name: Force JaCoCo XML report (standard path)
         run: |
           mvn -B jacoco:report \
@@ -63,15 +59,15 @@ jobs:
 
           echo "== target/site/jacoco listing =="
           ls -la target/site/jacoco || true
-          ls -la target/site/jacoco/jacoco.xml || true
 
           echo "== Does jacoco.xml contain Fraction.java? =="
-          grep -o 'sourcefilename="Fraction.java"' target/site/jacoco/jacoco.xml | head -n 5 || true
+          grep -n "sourcefilename=\"Fraction.java\"" target/site/jacoco/jacoco.xml || true
 
-          echo "== Fraction class snippet (should show covered > 0 if tests were recorded) =="
-          sed 's/<class /\n<class /g' target/site/jacoco/jacoco.xml \
-            | grep -n 'sourcefilename="Fraction.java"' -n -A 1 -B 0 || true
+          echo "== Fraction class snippet (class tag + nearby counters) =="
+          # jacoco.xml 可能是一行，先粗暴换行再 grep，避免一行太长看不懂
+          sed 's/</\n</g' target/site/jacoco/jacoco.xml | grep -n -A3 -B3 "sourcefilename=\"Fraction.java\"" | head -n 120 || true
 
+      # 5) SonarCloud 读取 XML（保持最小必要参数）
       - name: SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
