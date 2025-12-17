@@ -24,21 +24,19 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # 1) 先跑测试（确保 target 里有 jacoco.exec 等产物）
-      - name: Run tests
-        run: mvn -B -q test
-
-      # 2) 显式生成 JaCoCo XML 报告（SonarCloud 读取的是 XML）
-      - name: Generate JaCoCo XML report
-        run: mvn -B -q jacoco:report
-
-      # 3) SonarCloud 分析：显式告诉它 XML 报告路径
-      - name: SonarCloud analysis
+      # 用同一次 Maven 执行把 test / jacoco report / sonar 串起来
+      - name: Test + JaCoCo + Sonar
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          mvn -B sonar:sonar
-          -Dsonar.projectKey=NINGCHANGLIU_iwvg-devops-liu-ningchang
-          -Dsonar.organization=ningchangliu
-          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+        run: |
+          mvn -B -q test jacoco:report
+
+          echo "== JaCoCo report files =="
+          ls -la target/site/jacoco || true
+          ls -la target/site/jacoco/jacoco.xml || true
+
+          mvn -B sonar:sonar \
+            -Dsonar.projectKey=NINGCHANGLIU_iwvg-devops-liu-ningchang \
+            -Dsonar.organization=ningchangliu \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
