@@ -49,14 +49,16 @@ jobs:
           ls -la target/site/jacoco || true
           ls -la target/site/jacoco/jacoco.xml || true
 
-          echo "== jacoco LINE counters (first 40 matches) =="
-          grep -o "<counter type=\"LINE\" missed=\"[0-9]*\" covered=\"[0-9]*\"/>" target/site/jacoco/jacoco.xml | head -n 40 || true
-
           echo "== Does jacoco.xml contain Fraction.java? =="
-          grep -o "sourcefilename=\"Fraction.java\"" target/site/jacoco/jacoco.xml | head -n 5 || true
+          grep -o 'sourcefilename="Fraction.java"' target/site/jacoco/jacoco.xml | head -n 5 || true
 
-          echo "== Extract Fraction coverage block (python -c; non-blocking) =="
-          python3 -c 'import re, pathlib; p=pathlib.Path("target/site/jacoco/jacoco.xml"); xml=p.read_text(encoding="utf-8", errors="ignore"); print("Contains Fraction.java? ->", ("sourcefilename=\\"Fraction.java\\"" in xml)); m=re.search(r"(<class name=\\"[^\\"]*Fraction[^\\"]*\\" sourcefilename=\\"Fraction\\.java\\">.*?</class>)", xml); print("Fraction <class> block found? ->", bool(m)); classes=re.findall(r"<class name=\\"([^\\"]*Fraction[^\\"]*)\\"", xml); print("Class names containing Fraction (first 20):", classes[:20]); block=(m.group(1) if m else ""); line=re.findall(r"<counter type=\\"LINE\\" missed=\\"(\\d+)\\" covered=\\"(\\d+)\\\"/>", block); print("LINE counters in Fraction block (missed, covered):", line[:20]); print("--- Fraction block (first 600 chars) ---"); print(block[:600]); print("--- end ---")' || true
+          echo "== jacoco LINE counters (first 40 matches) =="
+          grep -o '<counter type="LINE" missed="[0-9]*" covered="[0-9]*"/>' target/site/jacoco/jacoco.xml | head -n 40 || true
+
+          echo "== Fraction class snippet (class tag + first LINE counters nearby) =="
+          # jacoco.xml 可能是一行，先把每个 <class> 拆行，再抓 Fraction 那个 class 附近内容
+          sed 's/<class /\n<class /g' target/site/jacoco/jacoco.xml \
+            | grep -n 'sourcefilename="Fraction.java"' -n -A 3 -B 0 || true
 
       - name: SonarCloud analysis
         env:
