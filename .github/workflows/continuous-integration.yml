@@ -52,6 +52,10 @@ jobs:
           ls -la target/site/jacoco || true
           ls -la target/site/jacoco/jacoco.xml || true
 
+          echo "== jacoco LINE covered summary (first 40 counters) =="
+          grep -n "<counter type=\"LINE\"" target/site/jacoco/jacoco.xml | head -n 40 || true
+      
+
       # 4) SonarCloud 读取 XML
       - name: SonarCloud analysis
         env:
