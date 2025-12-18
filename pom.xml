@@ -14,7 +14,7 @@
 
     <groupId>es.upm.miw</groupId>
     <artifactId>iwvg-devops-liu-ningchang</artifactId>
-    <version>5.0.0</version>
+    <version>5.1.0</version>
     <packaging>jar</packaging>
     <name>${project.groupId}.${project.artifactId}</name>
     <url>http://github.com/miw-upm/${project.artifactId}</url>
@@ -44,19 +44,28 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <project.resources.sourceEncoding>UTF-8</project.resources.sourceEncoding>
+
         <!-- Java -->
         <java.version>21</java.version>
         <deploy>${project.artifactId}-${project.version}</deploy>
+
         <!-- Maven -->
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
         <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
         <maven-failsafe-plugin.version>3.5.3</maven-failsafe-plugin.version>
+
         <!-- coverage report -->
         <jacoco.version>0.8.13</jacoco.version>
+
         <!-- Official Plugin Sonar -->
         <sonar-maven-plugin-version>5.2.0.4988</sonar-maven-plugin-version>
+
         <!-- OpenAPI -->
         <springdoc-openapi-starter-webmvc-ui.version>2.8.11</springdoc-openapi-starter-webmvc-ui.version>
+
+        <!-- Optional: keep default empty so @{} always resolves safely -->
+        <argLine></argLine>
+        <failsafeArgLine></failsafeArgLine>
     </properties>
 
     <dependencies>
@@ -69,16 +78,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+
         <!-- Actuator -->
-        <!-- http://localhost:8080/actuator/info   -->
-        <!-- http://localhost:8080/actuator/health -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-        <!-- OpenAPI http://localhost:8080/swagger-ui.html -->
-        <!-- OpenAPI http://localhost:8080/v3/api-docs -->
-        <!-- OpenAPI http://localhost:8081/v3/api-docs.yaml (yaml)  -->
+
+        <!-- OpenAPI -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -98,8 +105,10 @@
             </exclusions>
         </dependency>
     </dependencies>
+
     <build>
         <plugins>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -111,48 +120,85 @@
                     </execution>
                 </executions>
             </plugin>
+
             <!-- sonar plugin -->
             <plugin>
                 <groupId>org.sonarsource.scanner.maven</groupId>
                 <artifactId>sonar-maven-plugin</artifactId>
                 <version>${sonar-maven-plugin-version}</version>
             </plugin>
-            <!-- coverage report -->
+
+            <!-- JaCoCo: set agent into properties, then generate report -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
                 <executions>
+
+                    <!-- 1) Unit tests (Surefire) -->
                     <execution>
-                        <id>default-prepare-agent</id>
+                        <id>jacoco-prepare-agent-unit</id>
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
+                        <configuration>
+                            <!-- write into standard property "argLine" -->
+                            <propertyName>argLine</propertyName>
+                            <destFile>${project.build.directory}/jacoco.exec</destFile>
+                            <append>true</append>
+                        </configuration>
                     </execution>
+
+                    <!-- 2) Integration/Functional tests (Failsafe) -->
                     <execution>
-                        <id>default-report</id>
-                        <phase>post-integration-test</phase>
+                        <id>jacoco-prepare-agent-integration</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <!-- write into a separate property for failsafe -->
+                            <propertyName>failsafeArgLine</propertyName>
+                            <destFile>${project.build.directory}/jacoco.exec</destFile>
+                            <append>true</append>
+                        </configuration>
+                    </execution>
+
+                    <!-- 3) Report at verify -->
+                    <execution>
+                        <id>jacoco-report</id>
+                        <phase>verify</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>
+                        <configuration>
+                            <dataFile>${project.build.directory}/jacoco.exec</dataFile>
+                        </configuration>
                     </execution>
+
                 </executions>
             </plugin>
+
+            <!-- Unit Tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
-                    <argLine>
-                        -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar
-                        -Xshare:off
-                    </argLine>
+                    <!-- CRITICAL: use @{} for late evaluation, otherwise JaCoCo agent will be dropped -->
+                    <argLine>@{argLine} -Xshare:off</argLine>
                 </configuration>
             </plugin>
+
+            <!-- Integration + Functional Tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>${maven-failsafe-plugin.version}</version>
+                <configuration>
+                    <!-- CRITICAL: use @{} for late evaluation -->
+                    <argLine>@{failsafeArgLine} -Xshare:off</argLine>
+                </configuration>
                 <executions>
                     <!-- 1) Integration Tests -->
                     <execution>
@@ -167,6 +213,7 @@
                             </includes>
                         </configuration>
                     </execution>
+
                     <!-- 2) Functional Tests -->
                     <execution>
                         <id>functional-tests</id>
@@ -180,7 +227,8 @@
                             </includes>
                         </configuration>
                     </execution>
-                    <!-- 3) Verificación final (reporta fallos si algún IT o FT falla) -->
+
+                    <!-- 3) Final verify -->
                     <execution>
                         <id>verify-all</id>
                         <phase>verify</phase>
@@ -190,6 +238,7 @@
                     </execution>
                 </executions>
             </plugin>
+
         </plugins>
     </build>
 </project>
