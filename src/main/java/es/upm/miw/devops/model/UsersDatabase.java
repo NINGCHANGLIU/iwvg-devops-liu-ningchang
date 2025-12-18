@@ -2,7 +2,6 @@ package es.upm.miw.devops.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,5 +73,34 @@ public class UsersDatabase {
         long left = (long) a.getNumerator() * (long) b.getDenominator();
         long right = (long) b.getNumerator() * (long) a.getDenominator();
         return Long.compare(left, right);
+    }
+
+    // ---------------------------------------------------------
+    // Sprint 3 - Search 4
+    // ---------------------------------------------------------
+    /**
+     * Search 4: findFirstDecimalFractionByUserName
+     *
+     * Returns the decimal value of the first fraction (in insertion order)
+     * of the first user matching the given name.
+     *
+     * If user is not found or user has no fractions, returns null.
+     */
+    public Double findFirstDecimalFractionByUserName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Name must not be blank");
+        }
+
+        User user = this.usersById.values().stream()
+                .filter(u -> u != null && name.equals(u.getName()))
+                .findFirst()
+                .orElse(null);
+
+        if (user == null || user.getFractions().isEmpty()) {
+            return null;
+        }
+
+        Fraction first = user.getFractions().get(0);
+        return ((double) first.getNumerator()) / ((double) first.getDenominator());
     }
 }
