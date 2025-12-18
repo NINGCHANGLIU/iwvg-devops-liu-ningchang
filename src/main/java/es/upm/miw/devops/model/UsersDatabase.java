@@ -1,6 +1,11 @@
 package es.upm.miw.devops.model;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public class UsersDatabase {
@@ -42,5 +47,21 @@ public class UsersDatabase {
 
     public Stream<User> stream() {
         return this.usersById.values().stream();
+    }
+
+    // ---------------------------------------------------------
+    // Sprint 3 - Search 9
+    // ---------------------------------------------------------
+    /**
+     * Search 9: findHighestFraction
+     *
+     * Returns the highest Fraction among all fractions stored in all users.
+     * If there are no users or no fractions, returns null.
+     */
+    public Fraction findHighestFraction() {
+        return this.usersById.values().stream()
+                .flatMap(user -> user.getFractions().stream())
+                .max(Comparator.comparingDouble(f -> (double) f.getNumerator() / f.getDenominator()))
+                .orElse(null);
     }
 }

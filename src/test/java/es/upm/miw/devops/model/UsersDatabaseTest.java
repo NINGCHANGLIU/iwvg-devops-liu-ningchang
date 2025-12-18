@@ -70,4 +70,53 @@ public class UsersDatabaseTest {
 
         assertEquals(2, db.stream().count());
     }
+
+    // ---------------------------------------------------------
+    // Sprint 3 - Search 9 tests: findHighestFraction()
+    // ---------------------------------------------------------
+
+    @Test
+    void testFindHighestFractionWhenNoUsersReturnsNull() {
+        UsersDatabase db = new UsersDatabase();
+        assertNull(db.findHighestFraction());
+    }
+
+    @Test
+    void testFindHighestFractionWhenUsersHaveNoFractionsReturnsNull() {
+        UsersDatabase db = new UsersDatabase();
+        db.add(new User(1, "John", "Doe"));
+        db.add(new User(2, "Jane", "Smith"));
+        assertNull(db.findHighestFraction());
+    }
+
+    @Test
+    void testFindHighestFractionReturnsMaxAcrossAllUsers() {
+        UsersDatabase db = new UsersDatabase();
+
+        User u1 = new User(1, "John", "Doe");
+        User u2 = new User(2, "Jane", "Smith");
+
+        u1.addFraction(new Fraction(1, 2));   // 0.5
+        u1.addFraction(new Fraction(3, 4));   // 0.75
+        u2.addFraction(new Fraction(5, 6));   // 0.8333...
+        u2.addFraction(new Fraction(7, 10));  // 0.7
+
+        db.add(u1);
+        db.add(u2);
+
+        Fraction highest = db.findHighestFraction();
+        assertEquals(new Fraction(5, 6), highest);
+    }
+
+    @Test
+    void testFindHighestFractionSingleUserMultipleFractions() {
+        UsersDatabase db = new UsersDatabase();
+
+        User u1 = new User(1, "John", "Doe");
+        u1.addFraction(new Fraction(2, 3));  // 0.666...
+        u1.addFraction(new Fraction(9, 10)); // 0.9
+        db.add(u1);
+
+        assertEquals(new Fraction(9, 10), db.findHighestFraction());
+    }
 }
