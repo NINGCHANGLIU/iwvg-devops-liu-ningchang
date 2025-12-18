@@ -23,6 +23,31 @@ public class Fraction {
         return denominator;
     }
 
+    /**
+     * Proper fraction: |numerator| < |denominator|
+     */
+    public boolean isProper() {
+        return Math.abs(this.numerator) < Math.abs(this.denominator);
+    }
+
+    /**
+     * Improper fraction: |numerator| >= |denominator|
+     */
+    public boolean isImproper() {
+        return Math.abs(this.numerator) >= Math.abs(this.denominator);
+    }
+
+    /**
+     * Two fractions are equivalent if a/b == c/d  <=>  a*d == c*b
+     */
+    public boolean isEquivalent(Fraction other) {
+        if (other == null) {
+            throw new IllegalArgumentException("Other fraction must not be null");
+        }
+        return (long) this.numerator * (long) other.denominator
+                == (long) other.numerator * (long) this.denominator;
+    }
+
     @Override
     public String toString() {
         return numerator + "/" + denominator;
