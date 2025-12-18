@@ -215,4 +215,52 @@ public class UsersDatabaseTest {
         assertNotNull(result);
         assertEquals(-0.5, result, 1e-9);
     }
+
+    // ---------------------------------------------------------
+    // Sprint 3 - Search 8 tests: findUserFamilyNameBySomeImproperFraction()
+    // ---------------------------------------------------------
+
+    @Test
+    void testFindUserFamilyNameBySomeImproperFractionWhenNoUsersReturnsNull() {
+        UsersDatabase db = new UsersDatabase();
+        assertNull(db.findUserFamilyNameBySomeImproperFraction());
+    }
+
+    @Test
+    void testFindUserFamilyNameBySomeImproperFractionWhenNoImproperFractionsReturnsNull() {
+        UsersDatabase db = new UsersDatabase();
+
+        User u1 = new User(1, "John", "Doe");
+        u1.addFraction(new Fraction(1, 2)); // proper
+        db.add(u1);
+
+        assertNull(db.findUserFamilyNameBySomeImproperFraction());
+    }
+
+    @Test
+    void testFindUserFamilyNameBySomeImproperFractionReturnsFamilyName() {
+        UsersDatabase db = new UsersDatabase();
+
+        User u1 = new User(1, "John", "Doe");
+        u1.addFraction(new Fraction(1, 2)); // proper
+        db.add(u1);
+
+        User u2 = new User(2, "Jane", "Smith");
+        u2.addFraction(new Fraction(3, 2)); // improper
+        db.add(u2);
+
+        // Only u2 has improper, so the result must be "Smith"
+        assertEquals("Smith", db.findUserFamilyNameBySomeImproperFraction());
+    }
+
+    @Test
+    void testFindUserFamilyNameBySomeImproperFractionCountsEqualAsImproper() {
+        UsersDatabase db = new UsersDatabase();
+
+        User u1 = new User(1, "John", "Doe");
+        u1.addFraction(new Fraction(2, 2)); // |num| == |den| => improper
+        db.add(u1);
+
+        assertEquals("Doe", db.findUserFamilyNameBySomeImproperFraction());
+    }
 }
