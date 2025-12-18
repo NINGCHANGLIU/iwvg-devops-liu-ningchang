@@ -103,4 +103,21 @@ public class UsersDatabase {
         Fraction first = user.getFractions().get(0);
         return ((double) first.getNumerator()) / ((double) first.getDenominator());
     }
+
+    // ---------------------------------------------------------
+    // Sprint 3 - Search 8
+    // ---------------------------------------------------------
+    /**
+     * Search 8: findUserFamilyNameBySomeImproperFraction
+     *
+     * Returns the family name of a user who has at least one improper fraction.
+     * If no such user exists, returns null.
+     */
+    public String findUserFamilyNameBySomeImproperFraction() {
+        return this.usersById.values().stream()
+                .filter(user -> user.getFractions().stream().anyMatch(Fraction::isImproper))
+                .map(User::getFamilyName)
+                .findFirst()
+                .orElse(null);
+    }
 }
