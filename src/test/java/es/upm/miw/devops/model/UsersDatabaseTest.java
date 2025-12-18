@@ -105,6 +105,7 @@ public class UsersDatabaseTest {
         db.add(u2);
 
         Fraction highest = db.findHighestFraction();
+        assertNotNull(highest);
         assertEquals(new Fraction(5, 6), highest);
     }
 
@@ -118,5 +119,41 @@ public class UsersDatabaseTest {
         db.add(u1);
 
         assertEquals(new Fraction(9, 10), db.findHighestFraction());
+    }
+
+    @Test
+    void testFindHighestFractionHandlesEquivalentFractionsKeepsAValidMax() {
+        UsersDatabase db = new UsersDatabase();
+
+        User u1 = new User(1, "John", "Doe");
+        User u2 = new User(2, "Jane", "Smith");
+
+        u1.addFraction(new Fraction(1, 2));  // 0.5
+        u2.addFraction(new Fraction(2, 4));  // 0.5 (equivalent)
+
+        db.add(u1);
+        db.add(u2);
+
+        Fraction highest = db.findHighestFraction();
+        assertNotNull(highest);
+        // Accept either equivalent representation as max; both are valid highest values.
+        assertTrue(highest.equals(new Fraction(1, 2)) || highest.equals(new Fraction(2, 4)));
+    }
+
+    @Test
+    void testFindHighestFractionWithNegativeAndZeroValues() {
+        UsersDatabase db = new UsersDatabase();
+
+        User u1 = new User(1, "John", "Doe");
+        User u2 = new User(2, "Jane", "Smith");
+
+        u1.addFraction(new Fraction(-1, 2)); // -0.5
+        u1.addFraction(new Fraction(0, 5));  // 0
+        u2.addFraction(new Fraction(1, 3));  // 0.333...
+
+        db.add(u1);
+        db.add(u2);
+
+        assertEquals(new Fraction(1, 3), db.findHighestFraction());
     }
 }
