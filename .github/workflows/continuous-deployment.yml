@@ -34,12 +34,11 @@ jobs:
           echo "VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
           echo "ARTIFACT=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)" >> $GITHUB_ENV
 
-      # 关键：GHCR 的镜像名必须全小写（owner/repo）
       - name: 🔤 Normalize repository name (lowercase)
         run: |
           echo "REPOSITORY_LC=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: 📦 Login to GitHub Container Registry
+      - name: 🔐 Login to GitHub Container Registry (GHCR)
         uses: docker/login-action@v3
         with:
           registry: ${{ env.GHCR_URL }}
