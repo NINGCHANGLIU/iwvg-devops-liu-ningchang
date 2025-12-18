@@ -60,8 +60,19 @@ public class UsersDatabase {
      */
     public Fraction findHighestFraction() {
         return this.usersById.values().stream()
+                .filter(user -> user != null) // defensive, even if add() blocks null
                 .flatMap(user -> user.getFractions().stream())
-                .max(Comparator.comparingDouble(f -> (double) f.getNumerator() / f.getDenominator()))
+                .max(UsersDatabase::compareFractionsByValue)
                 .orElse(null);
+    }
+
+    /**
+     * Compare two fractions by their mathematical value using cross-multiplication,
+     * avoiding double precision issues.
+     */
+    private static int compareFractionsByValue(Fraction a, Fraction b) {
+        long left = (long) a.getNumerator() * (long) b.getDenominator();
+        long right = (long) b.getNumerator() * (long) a.getDenominator();
+        return Long.compare(left, right);
     }
 }
