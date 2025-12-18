@@ -2,24 +2,26 @@ name: CD
 
 on:
   push:
-    branches: ['master']
-
-permissions:
-  contents: read
-  packages: write   # ⭐ 关键：允许 GHCR push
+    branches: ["master"]
 
 env:
   GHCR_URL: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/iwvg-devops-liu-ningchang
 
 jobs:
   cd:
     name: Build & Push Docker image & Deploy on Render
     runs-on: ubuntu-22.04
 
+    # 关键：不给这个就会 permission_denied: write_package
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: ⬇️ Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: ☕ Set up Java
         uses: actions/setup-java@v4
@@ -28,14 +30,24 @@ jobs:
           java-version: 21
           cache: maven
 
-      - name: 🏷️ Extract version from pom.xml
+      - name: 🏷️ Extract artifact from pom
         run: |
           echo "VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+          echo "ARTIFACT=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)" >> $GITHUB_ENV
 
-      - name: 🔐 Login to GHCR with GITHUB_TOKEN
+      # 关键：把 <owner>/<repo> 转成全小写，避免 GHCR invalid tag
+      - name: 🔤 Compute lowercase image name
+        shell: bash
+        run: |
+          REPO_LC="$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          echo "REPOSITORY_LC=${REPO_LC}" >> $GITHUB_ENV
+          echo "IMAGE=${{ env.GHCR_URL }}/${REPO_LC}" >> $GITHUB_ENV
+
+      # 使用 GITHUB_TOKEN 登录 GHCR（配合 permissions.packages: write）
+      - name: 📦 Login to GHCR with GITHUB_TOKEN
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.GHCR_URL }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -45,9 +57,12 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-            ghcr.io/${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE }}:${{ env.VERSION }}
+            ${{ env.IMAGE }}:latest
 
+      # 建议你把 Render 的 Deploy Hook “完整 URL” 存成 secret：RENDER_DEPLOY_HOOK_URL
       - name: 🚀 Deploy on Render
         run: |
-          curl -f -X POST "https://api.render.com/deploy/${{ secrets.RENDER_DEPLOY_HOOK_TOKEN }}"
+          curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+          && echo "✅ Deployment succeeded" \
+          || (echo "❌ Deployment failed" && exit 1)
