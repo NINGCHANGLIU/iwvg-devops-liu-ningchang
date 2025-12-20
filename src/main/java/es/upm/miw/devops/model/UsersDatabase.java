@@ -26,9 +26,6 @@ public class UsersDatabase {
         this.usersById.put(id, user);
     }
 
-    /**
-     * Finds a user by id. Returns null if not found.
-     */
     public User findById(int id) {
         if (id <= 0) {
             throw new IllegalArgumentException("Id must be positive");
@@ -51,24 +48,13 @@ public class UsersDatabase {
     // ---------------------------------------------------------
     // Sprint 3 - Search 9
     // ---------------------------------------------------------
-    /**
-     * Search 9: findHighestFraction
-     *
-     * Returns the highest Fraction among all fractions stored in all users.
-     * If there are no users or no fractions, returns null.
-     */
     public Fraction findHighestFraction() {
         return this.usersById.values().stream()
-                .filter(user -> user != null) // defensive, even if add() blocks null
                 .flatMap(user -> user.getFractions().stream())
                 .max(UsersDatabase::compareFractionsByValue)
                 .orElse(null);
     }
 
-    /**
-     * Compare two fractions by their mathematical value using cross-multiplication,
-     * avoiding double precision issues.
-     */
     private static int compareFractionsByValue(Fraction a, Fraction b) {
         long left = (long) a.getNumerator() * (long) b.getDenominator();
         long right = (long) b.getNumerator() * (long) a.getDenominator();
@@ -76,43 +62,33 @@ public class UsersDatabase {
     }
 
     // ---------------------------------------------------------
-    // Sprint 3 - Search 4
+    // Bug fix (was Sprint 3 - Search 4)
     // ---------------------------------------------------------
     /**
-     * Search 4: findFirstDecimalFractionByUserName
+     * BUGFIX: Search 4
      *
-     * Returns the decimal value of the first fraction (in insertion order)
+     * Now returns the decimal value of the FIRST **PROPER** fraction
      * of the first user matching the given name.
      *
-     * If user is not found or user has no fractions, returns null.
+     * If user is not found or has no proper fractions, returns null.
      */
     public Double findFirstDecimalFractionByUserName(String name) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Name must not be blank");
         }
 
-        User user = this.usersById.values().stream()
-                .filter(u -> u != null && name.equals(u.getName()))
+        return this.usersById.values().stream()
+                .filter(user -> name.equals(user.getName()))
+                .flatMap(user -> user.getFractions().stream())
+                .filter(Fraction::isProper)
                 .findFirst()
+                .map(f -> (double) f.getNumerator() / f.getDenominator())
                 .orElse(null);
-
-        if (user == null || user.getFractions().isEmpty()) {
-            return null;
-        }
-
-        Fraction first = user.getFractions().get(0);
-        return ((double) first.getNumerator()) / ((double) first.getDenominator());
     }
 
     // ---------------------------------------------------------
     // Sprint 3 - Search 8
     // ---------------------------------------------------------
-    /**
-     * Search 8: findUserFamilyNameBySomeImproperFraction
-     *
-     * Returns the family name of a user who has at least one improper fraction.
-     * If no such user exists, returns null.
-     */
     public String findUserFamilyNameBySomeImproperFraction() {
         return this.usersById.values().stream()
                 .filter(user -> user.getFractions().stream().anyMatch(Fraction::isImproper))
